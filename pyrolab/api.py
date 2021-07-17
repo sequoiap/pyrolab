@@ -15,7 +15,8 @@ from Pyro5.core import locate_ns
 from Pyro5.client import Proxy
 
 from pyrolab.nameserver import start_ns_loop, start_ns, ns_profile, NameserverConfiguration
-from pyrolab.server import Daemon, LockableDaemon, srv_profile, ServerConfiguration
+from pyrolab.server.server import Daemon, LockableDaemon
+from pyrolab.server import srv_profile, ServerConfiguration
 from pyrolab.server import expose, behavior, oneway, serve
 
 

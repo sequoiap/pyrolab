@@ -37,7 +37,7 @@ class Lockable:
         self._RESOURCE_LOCK: bool = False
         self.user: str = ""
 
-    def lock(self, user: str="") -> None:
+    def lock(self, user: str="") -> bool:
         """
         Locks access to the object's attributes.
 
@@ -50,12 +50,25 @@ class Lockable:
         self._RESOURCE_LOCK = True
         self.user = user
 
-    def release(self) -> None:
+        daemon = getattr(self, "_pyroDaemon", None)
+        if daemon:
+            return daemon._lock(self._pyroId, daemon._last_requestor)
+
+        return True
+
+
+    def release(self) -> bool:
         """
         Releases the lock on the object.
         """
         self._RESOURCE_LOCK = False
         self.user = ""
+
+        daemon = getattr(self, "_pyroDaemon", None)
+        if daemon:
+            return daemon._release(self._pyroId)
+
+        return True
 
     def islocked(self) -> bool:
         """
@@ -67,6 +80,7 @@ class Lockable:
             True if the lock is engaged, False otherwise.
         """
         return self._RESOURCE_LOCK
+
 
 def create_lockable(cls) -> Instrument:
     """

@@ -15,16 +15,19 @@ is working properly.
 import time
 from typing import Union
 
-from pyrolab.api import expose
+from pyrolab.api import expose, behavior
 from pyrolab.drivers import Instrument
 
 
 Number = Union[int, float]
 
-    
+
 @expose
 class SampleService:
     def __init__(self):
+        pass
+
+    def close(self):
         pass
 
     def echo(self, message: str) -> str:
@@ -107,10 +110,14 @@ class SampleService:
         return num / den
 
 
+@behavior(instance_mode="single")
 @expose
 class SampleAutoconnectInstrument(Instrument):
     def __init__(self) -> None:
         self.connected = False
+
+    def close(self):
+        pass
 
     def connect(self, address="localhost", port=9090):
         if address != "0.0.0.0":
@@ -124,3 +131,14 @@ class SampleAutoconnectInstrument(Instrument):
         if not self.connected:
             raise Exception("This object cannot do work until connection is made.")
         return True
+
+    def whoami(self):
+        """
+        Returns the object id of the instance that handled the request.
+
+        Returns
+        -------
+        resp : str
+            The object id of the handling instance.
+        """
+        return "OBJECT ID: " + str(id(self))

@@ -28,6 +28,7 @@ class Profile:
 
         self.name = 'default'
         self.configuration = config()
+        self.save(overwrite=True)
 
     def __str__(self):
         return f"<{self.__class__.__module__}.{self.__class__.__name__} '{self.name}'>"
@@ -105,15 +106,22 @@ class Profile:
         """
         return [path.stem for path in self._base_dir.glob(f'*{self._suffix}')]
 
-    def save(self):
+    def save(self, overwrite: bool=False) -> bool:
         """
         Updates the current (modified) profile.
+
+        Parameters
+        ----------
+        overwrite : bool, optional
+            If the profile exists, it is overwritten (default False).
         """
-        if self.name != 'default':
-            profile = self._get_profile_path(self.name)
-            if profile.exists():
-                with profile.open('w') as fout:
-                    fout.write(dump(self.configuration.to_dict()))
+        profile = self._get_profile_path(self.name)
+        if profile.exists():
+            if not overwrite:
+                return False
+        with profile.open('w') as fout:
+            fout.write(dump(self.configuration.to_dict()))
+        return True
 
     def export(self, name: str, path: Union[pathlib.Path, str]):
         """

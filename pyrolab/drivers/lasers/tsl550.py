@@ -34,26 +34,20 @@ import time
 import struct
 
 import serial
-from Pyro5.api import expose
-import pyrolab.api
+from serial.tools import list_ports
+from pyrolab.api import expose, behavior
+
+from typing import Any, Dict, List
+
+from pyrolab.drivers.lasers import Laser
 
 
+@behavior(instance_mode="single")
 @expose
-class TSL550:
+class TSL550(Laser):
     """ A Santec TSL-550 laser.
 
     Lasers can only be accessed by their serial port address.
-
-    Parameters
-    ----------
-    address : str, optional
-        Address is the serial port the laser is connected to (default "COM4").
-    baudrate : int, optional
-        Baudrate can be set on the device (default 9600).
-    terminator : str, optional
-        The string that marks the end of a command (default "\\\\r").
-    timeout : int, optional
-        The number of seconds to timeout after no response (default 100).
 
     Attributes
     ----------
@@ -92,7 +86,48 @@ class TSL550:
 
     activated = False
 
-    def __init__(self, address, baudrate=9600, terminator="\r", timeout=100, query_delay=0.05):
+    @staticmethod
+    def detect_devices(self) -> List[Dict[str, Any]]:
+        """
+        Finds and returns all information needed to connect to the device.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            Each item in the list contains a dictionary for a unique laser.
+            A dictionary from the list can be passed to ``connect()`` to
+            connect to the laser. If no device is detected, an empty list 
+            is returned.
+        """
+        device_info = []
+        for port in list_ports.comports():
+            if port.manufacturer == "Santec Corp.":
+                location = port.device
+                device_info.append({"address": location})
+
+        return device_info
+
+
+    def connect(self, address="", baudrate=9600, terminator="\r", timeout=100, query_delay=0.05) -> bool:
+        """
+        Connects to and initializes the laser. All parameters are keyword arguments.
+
+        Parameters
+        ----------
+        address : str
+            Address is the serial port the laser is connected to (default "").
+        baudrate : int, optional
+            Baudrate can be set on the device (default 9600).
+        terminator : str, optional
+            The string that marks the end of a command (default "\\\\r").
+        timeout : int, optional
+            The number of seconds to timeout after no response (default 100).
+
+        Returns
+        -------
+        bool
+            True if the device has been successfuly connected to. False otherwise.
+        """
         self.activated = True
         self.device = serial.Serial(address, baudrate=baudrate, timeout=timeout)
         self.device.flushInput()
@@ -114,11 +149,12 @@ class TSL550:
         # Set sweep mode to continuous, two-way, trigger off
         self.sweep_set_mode()
 
+        return self.device.is_open
+
     def close(self):
         """
         Closes the serial connection to the laser.
         """
-
         if(self.activated == False):
             raise Exception("Device is locked")
 

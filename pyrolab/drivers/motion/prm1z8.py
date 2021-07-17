@@ -17,8 +17,10 @@ Contributors
 
 from pyrolab.drivers.motion import Motion
 from pyrolab.drivers.motion._kinesis.kdc101 import KDC101, HomingMixin
-from pyrolab.api import expose
+from pyrolab.api import expose, behavior
 
+
+@behavior(instance_mode="single")
 @expose
 class PRM1Z8(Motion, KDC101, HomingMixin):
     """

@@ -5,7 +5,7 @@
 ---
 
 <p align="center">
-<img alt="Development version" src="https://img.shields.io/badge/master-v0.1.1-informational">
+<img alt="Development version" src="https://img.shields.io/badge/master-v0.2.0-informational">
 <a href="https://pypi.python.org/pypi/pyrolab"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/pyrolab.svg"></a>
 <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/pyrolab">
 <!-- <a href="https://github.com/BYUCamachoLab/simphony/actions?query=workflow%3A%22build+%28pip%29%22"><img alt="Build Status" src="https://github.com/BYUCamachoLab/simphony/workflows/build%20(pip)/badge.svg"></a> -->

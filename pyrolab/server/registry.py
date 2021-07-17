@@ -29,12 +29,12 @@ configuration settings.
 """
 
 from __future__ import annotations
-import atexit
 import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Generator, Set, Type, Union
 from pprint import PrettyPrinter
 import logging
+import uuid
 
 from yaml import safe_load, dump
 
@@ -48,10 +48,6 @@ if TYPE_CHECKING:
 log = logging.getLogger("pyrolab.server.registry")
 
 
-# TODO: Make this some sort of PyroLab configuration parameter.
-REGISTRY_AUTOSAVE = True
-
-
 class InstrumentInfo:
     """
     Groups together information about a PyroLab driver, including connection
@@ -59,40 +55,42 @@ class InstrumentInfo:
 
     Parameters
     ----------
-    registered_name : str
-        The name used to register the class with a nameserver.
+    name : str
+        A unique human-readable name for identifying the instrument.
     module : str
         The PyroLab module the class belongs to, as a string.
-    class_name : str
-        The class name of the object to be registered, as a string.
+    classname : str
+        The classname of the object to be registered, as a string.
     connect_params : Dict[str, Any]
         A dictionary of parameters passed to the object's ``connect()`` 
         function when ``autoconnect()`` is invoked.
-    lockable : bool
-        Whether the class should be made lockable whene instantiated.
-    metadata : Set[str]
-        Metadata that should be registered with the nameserver. Often is just
-        comments or notes to display to the user.
+    description : str, optional
+        Description string for providing more information about the device.
     """
-    def __init__(self, registered_name: str="", module: str="", 
-                 class_name: str="", connect_params: Dict[str, Any]={},
-                 lockable: bool=False, metadata: Set[str]=set()) -> None:
-        self.registered_name = registered_name
+    def __init__(self, name: str="", module: str="", classname: str="", 
+                 description: str="", connect_params: Dict[str, Any]={},
+                 lockable: bool=False) -> None:
+        self.name = name
         self.module = module
-        self.class_name = class_name
+        self.classname = classname
+        self.description = description
         self.connect_params = connect_params
         self.lockable = lockable
-        self.metadata = metadata
 
     def __repr__(self) -> str:
-        return f"<'{self.registered_name}': {self.__class__.__name__}({self.fqn}) at {hex(id(self))}>"
+        return f"<'{self.name}': {self.__class__.__name__}({self.fqn}) at {hex(id(self))}>"
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
 
     @property
     def fqn(self) -> str:
         """
         Fully-qualified name, ``<module>.<class>``.
         """
-        return self.module + "." + self.class_name
+        return self.module + "." + self.classname
 
     @classmethod
     def from_dict(cls, dictionary: Dict[str, Any]) -> InstrumentInfo:
@@ -137,7 +135,7 @@ class InstrumentInfo:
             The class of the referenced Instrument.
         """
         mod = importlib.import_module(self.module)
-        obj: Instrument = getattr(mod, self.class_name)
+        obj: Instrument = getattr(mod, self.classname)
         if self.lockable:
             obj = create_lockable(obj)
         return obj
@@ -177,7 +175,20 @@ class InstrumentRegistry:
         """
         self.instruments = {}
 
-    def get(self, name) -> InstrumentInfo:
+    def get(self, name: str) -> InstrumentInfo:
+        """
+        Gets an InstrumentInfo object by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the InstrumentInfo to get.
+
+        Returns
+        -------
+        info : InstrumentInfo
+            The info object in the registry with the given name.
+        """
         return self.instruments[name]
 
     def register(self, info: InstrumentInfo):
@@ -195,10 +206,10 @@ class InstrumentRegistry:
         Exception
             If the ``registered_name`` already exists in the registry.
         """
-        if info.registered_name in self.instruments:
-            raise Exception(f"name '{info.registered_name}' already reserved in registry!")
+        if info.name in self.instruments:
+            raise Exception(f"name '{info.name}' already reserved in registry!")
         else:
-            self.instruments[info.registered_name] = info
+            self.instruments[info.name] = info
 
     def unregister(self, name):
         """
@@ -246,7 +257,7 @@ class InstrumentRegistry:
                 infos = safe_load(fin)
                 for _, info in infos.items():
                     obj = InstrumentInfo.from_dict(info)
-                    self.instruments[obj.registered_name] = obj
+                    self.instruments[obj.name] = obj
             return self
         return False
 
@@ -280,15 +291,38 @@ class InstrumentRegistry:
         if update_file:
             raise NotImplementedError
 
-    def prettyprint(self):
+    def prettyprint(self) -> None:
+        """
+        Utility for pretty printing the instruments contained within the 
+        registry.
+        """
         pp = PrettyPrinter()
         pp.pprint(self.instruments)
 
 
-registry = InstrumentRegistry()
-registry.load()
+def create_unique_resource(cls, **kwargs) -> Instrument:
+    """
+    Dynamically create a new class that is subclassed from ``cls``. Adds 
+    attributes to the class as key-value pairs from ``**kwargs``.
 
-@atexit.register
-def save_registry_on_exit():
-    if REGISTRY_AUTOSAVE:
-        registry.save()
+    Parameters
+    ----------
+    cls : class
+        The class to be used as a template while dynamically creating a new
+        class.
+    **kwargs
+        Any number of key-value pairs to be added as attribtes to the class.
+    
+    Returns
+    -------
+    class
+        A subclass that inherits from the original class.
+    """
+    class_id = uuid.uuid4().hex
+    kwargs["id"] = class_id
+    UniqueResource = type(
+        cls.__name__ + "_" + class_id,
+        (cls, ),
+        kwargs,
+    )
+    return UniqueResource

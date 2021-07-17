@@ -13,20 +13,19 @@ from Pyro5.api import expose, behavior, oneway, serve
 
 from .configure import srv_profile, ServerConfiguration
 from .configure import SERVER_CONFIG_DIR, SERVER_DATA_DIR
-from .server import Daemon, LockableDaemon, AutoconnectLockableDaemon
-from .registry import registry
+# from .server import Daemon, LockableDaemon
+# from .registry import registry
 
 __all__ = [
     "SERVER_CONFIG_DIR",
     "SERVER_DATA_DIR",
     "srv_profile",
     "ServerConfiguration",
-    "Daemon",
-    "LockableDaemon",
-    "AutoconnectLockableDaemon",
+    # "Daemon",
+    # "LockableDaemon",
     "expose", 
     "behavior", 
     "oneway", 
     "serve",
-    "registry"
+    # "registry"
 ]
